@@ -1,0 +1,33 @@
+/* src/AddressDetailsPage.css */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 1em;
+    font-family: Arial, sans-serif;
+    border: 3px solid green; /* Bold green border */
+  }
+  
+  table th, table td {
+    padding: 12px;
+    border: 1px solid green; /* Bold green border */
+  }
+  
+  table th {
+    background-color: #f4f4f4;
+    text-align: center; /* Center column headings */
+  }
+  
+  table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .wrap-text {
+    white-space: pre-wrap; /* CSS3 */
+    white-space: -moz-pre-wrap; /* Firefox */
+    white-space: -pre-wrap; /* Opera <7 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    word-wrap: break-word; /* IE */
+  }
+  

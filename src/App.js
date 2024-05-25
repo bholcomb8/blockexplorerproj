@@ -1,36 +1,92 @@
-import { Alchemy, Network } from 'alchemy-sdk';
-import { useEffect, useState } from 'react';
-
+import React, { useMemo } from 'react';
+import { BrowserRouter as Router, Route, Switch, Link } from 'react-router-dom';
+import { useQuery } from 'react-query';
+import Header from './Header';
+import Table from './Table';
+import TransactionsPage from './TransactionsPage';
+import TransactionDetailsPage from './TransactionDetailsPage';
+import AddressDetailsPage from './AddressDetailsPage';
 import './App.css';
+import { formatHexToHumanReadable } from './utils';
 
-// Refer to the README doc for more information about using API
-// keys in client-side code. You should never do this in production
-// level code.
-const settings = {
-  apiKey: process.env.REACT_APP_ALCHEMY_API_KEY,
-  network: Network.ETH_MAINNET,
+const fetchLatestBlocks = async (alchemy) => {
+  const blockNumber = await alchemy.core.getBlockNumber();
+  let blockArray = [];
+  for (let i = 0; i < 30; i++) {
+    const block = await alchemy.core.getBlock(blockNumber - i);
+    blockArray.push(block);
+  }
+  return blockArray;
 };
 
+const fetchLatestTransactions = async (alchemy) => {
+  const blockNumber = await alchemy.core.getBlockNumber();
+  const block = await alchemy.core.getBlockWithTransactions(blockNumber);
+  return block.transactions.slice(0, 30);
+};
 
-// In this week's lessons we used ethers.js. Here we are using the
-// Alchemy SDK is an umbrella library with several different packages.
-//
-// You can read more about the packages here:
-//   https://docs.alchemy.com/reference/alchemy-sdk-api-surface-overview#api-surface
-const alchemy = new Alchemy(settings);
+const App = ({ alchemy }) => {
+  const { data: latestBlocks, error: blockError, isLoading: blockLoading } = useQuery(
+    'latestBlocks',
+    () => fetchLatestBlocks(alchemy),
+    { staleTime: 60000 }
+  );
 
-function App() {
-  const [blockNumber, setBlockNumber] = useState();
+  const { data: latestTransactions, error: transactionError, isLoading: transactionLoading } = useQuery(
+    'latestTransactions',
+    () => fetchLatestTransactions(alchemy),
+    { staleTime: 60000 }
+  );
 
-  useEffect(() => {
-    async function getBlockNumber() {
-      setBlockNumber(await alchemy.core.getBlockNumber());
-    }
+  const blColumn = useMemo(
+    () => [
+      {
+        Header: "Latest Blocks",
+        accessor: "number",
+        Cell: ({ value }) => <Link to={`/block/${value}`}>{value}</Link>,
+      },
+    ],
+    []
+  );
 
-    getBlockNumber();
-  });
+  const txnColumn = useMemo(
+    () => [
+      {
+        Header: "Latest Transactions",
+        accessor: "hash",
+        Cell: ({ value }) => <Link to={`/transaction/${value}`}>{value}</Link>,
+      },
+    ],
+    []
+  );
 
-  return <div className="App">Block Number: {blockNumber}</div>;
-}
+  if (blockLoading || transactionLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (blockError || transactionError) {
+    return <div>Error loading data</div>;
+  }
+
+  return (
+    <Router>
+      <Header />
+      <div className="App">
+        <Switch>
+          <Route exact path="/" render={() => (
+            <div className="table-container">
+              <Table columns={blColumn} data={latestBlocks || []} />
+              <Table columns={txnColumn} data={latestTransactions || []} />
+            </div>
+          )} />
+          <Route path="/block/:blockNumber" render={() => <TransactionsPage alchemy={alchemy} />} />
+          <Route path="/transaction/:transactionHash" render={() => <TransactionDetailsPage alchemy={alchemy} />} />
+          <Route path="/address/:address" render={() => <AddressDetailsPage alchemy={alchemy} />} />
+        </Switch>
+      </div>
+    </Router>
+  );
+};
 
 export default App;
+
